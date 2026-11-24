@@ -25,11 +25,10 @@ docker compose up --build
 
 Open the dashboard at [http://localhost:4200](http://localhost:4200). The API is available at [http://localhost:8080](http://localhost:8080). Stop with `Ctrl+C`; remove the database volume with `docker compose down -v`.
 
-To run only the API dependencies with containers and serve Angular from its dev server:
+To use Angular’s dev server while keeping the API and its dependencies in containers:
 
 ```bash
-docker compose up postgres redis
-cd backend && mvn spring-boot:run
+docker compose up -d postgres redis api
 cd frontend && npm install && npm start
 ```
 
