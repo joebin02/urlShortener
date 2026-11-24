@@ -66,10 +66,11 @@ The async click handler currently writes to PostgreSQL directly through Spring's
 Install [k6](https://k6.io/docs/get-started/installation/) and create a link first. Then run:
 
 ```bash
+RATE_LIMIT_CAPACITY=2000 RATE_LIMIT_REFILL_PER_SECOND=2000 docker compose up -d --force-recreate api
 BASE_URL=http://localhost:8080 SHORT_CODE=YOURCODE k6 run load-test/redirects.js
 ```
 
-The script targets 1,000 redirect requests/second for 60 seconds and reports error rate and p95 latency. Adjust VUs and thresholds to available hardware. Measure with a warm cache and cold cache separately, document machine/database topology, and repeat runs. Do not quote a benchmark result until you have captured and can reproduce it.
+The script targets 1,000 successful redirects/second for 60 seconds and reports error rate and p95 latency. The Compose default rate limit is intentionally lower, so raise the limit as shown before the run; 429 responses fail the check. Adjust VUs and thresholds to available hardware. Measure with a warm cache and cold cache separately, document machine/database topology, and repeat runs. Do not quote a benchmark result until you have captured and can reproduce it.
 
 ## Configuration
 

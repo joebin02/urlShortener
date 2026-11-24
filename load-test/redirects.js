@@ -10,6 +10,6 @@ export const options = {
 };
 export default function () {
   const response = http.get(`${base}/${code}`, { redirects: 0 });
-  check(response, { 'redirect or missing link response': r => r.status === 302 || r.status === 404 || r.status === 429 });
+  check(response, { 'redirect or missing link response': r => r.status === 302 });
   sleep(0.001);
 }
