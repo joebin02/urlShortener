@@ -28,7 +28,7 @@ public class AnalyticsService {
         ShortLink link = links.findByShortCode(code).orElseThrow(() -> new IllegalArgumentException("Unknown short code"));
         var daily = new LinkedHashMap<String, Long>();
         for (Object[] row : clicks.dailyCounts(code, Instant.now().minus(7, ChronoUnit.DAYS)))
-            daily.put(((java.sql.Timestamp) row[0]).toLocalDateTime().toLocalDate().toString(), ((Number) row[1]).longValue());
+            daily.put(((Instant) row[0]).atZone(java.time.ZoneOffset.UTC).toLocalDate().toString(), ((Number) row[1]).longValue());
         return Map.of("code", code, "originalUrl", link.getOriginalUrl(), "totalClicks", clicks.countByShortCode(code), "last7Days", daily);
     }
 }
