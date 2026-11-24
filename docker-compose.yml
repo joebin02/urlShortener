@@ -1,36 +1,40 @@
 services:
   frontend:
     build: ./frontend
-    ports: ["4200:80"]
+    ports: ["${FRONTEND_BIND_ADDRESS:-127.0.0.1}:${FRONTEND_HOST_PORT:-4200}:80"]
+    restart: unless-stopped
     depends_on: [api]
   api:
     build: .
     environment:
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/shortly
-      SPRING_DATASOURCE_USERNAME: shortly
-      SPRING_DATASOURCE_PASSWORD: shortly
+      SPRING_DATASOURCE_USERNAME: ${SHORTLY_DB_USER:-shortly}
+      SPRING_DATASOURCE_PASSWORD: ${SHORTLY_DB_PASSWORD:-shortly}
       SPRING_DATA_REDIS_HOST: redis
-      APP_BASE_URL: http://localhost:8080
+      APP_BASE_URL: ${APP_BASE_URL:-http://localhost:8080}
       RATE_LIMIT_CAPACITY: ${RATE_LIMIT_CAPACITY:-30}
       RATE_LIMIT_REFILL_PER_SECOND: ${RATE_LIMIT_REFILL_PER_SECOND:-1}
-    ports: ["8080:8080"]
+    ports: ["${API_BIND_ADDRESS:-127.0.0.1}:${API_HOST_PORT:-8080}:8080"]
+    restart: unless-stopped
     depends_on:
       postgres: { condition: service_healthy }
       redis: { condition: service_healthy }
   postgres:
     image: postgres:16-alpine
+    restart: unless-stopped
     environment:
       POSTGRES_DB: shortly
-      POSTGRES_USER: shortly
-      POSTGRES_PASSWORD: shortly
+      POSTGRES_USER: ${SHORTLY_DB_USER:-shortly}
+      POSTGRES_PASSWORD: ${SHORTLY_DB_PASSWORD:-shortly}
     volumes: [postgres_data:/var/lib/postgresql/data]
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U shortly -d shortly"]
+      test: ["CMD-SHELL", "pg_isready -U ${SHORTLY_DB_USER:-shortly} -d shortly"]
       interval: 5s
       timeout: 3s
       retries: 10
   redis:
     image: redis:7-alpine
+    restart: unless-stopped
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 5s

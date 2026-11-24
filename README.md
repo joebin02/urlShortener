@@ -89,3 +89,63 @@ This is an educational starter, not a hardened public deployment. Production wor
 ## Explain it in an interview
 
 Start with the request path: creation validates the URL, allocates a random code, and persists it behind a unique constraint. On redirect, the service checks Redis and falls back to PostgreSQL on a cache miss. The token bucket uses a Redis Lua script so check, refill, and decrement are atomic across replicas. It returns the redirect without waiting for analytics; a background executor records a click event and updates summary data. Then discuss tradeoffs: cache TTL/staleness, collision probability and unique-index retries, eventual consistency, and when you'd add a durable queue or partition event storage.
+
+## Deploy on Oracle Cloud Always Free
+
+The project can run as four Docker containers on one small Ubuntu VM: Angular/Nginx, Spring Boot, PostgreSQL, and Redis. The VM must be in an Always Free eligible shape and stay within Oracle's current Always Free resource limits. Oracle notes that free compute capacity may temporarily be unavailable in some regions. See [Oracle Always Free resources](https://docs.oracle.com/en-us/iaas/Content/FreeTier/freetier_topic-Always_Free_Resources.htm).
+
+### 1. Create the VM
+
+In the Oracle Cloud Console, create a Compute instance in your home region. Choose an Always Free eligible Ampere A1 shape and an Ubuntu 24.04 ARM64 image. Attach a public IPv4 address and your SSH public key. A 1 OCPU / 6 GB configuration is a reasonable starting point when available.
+
+In the subnet security list (or a Network Security Group), allow inbound TCP 22 only from your own public IP address and TCP 80 from `0.0.0.0/0`. Do not open ports 8080, 5432, or 6379. The app publishes only the web entry point; the API binds to loopback and PostgreSQL/Redis stay inside Docker's private network.
+
+### 2. Install Docker
+
+Copy the contents of `deploy/oracle-cloud/install-docker-ubuntu.sh` into the instance's cloud-init user-data field when creating the VM. Docker officially supports Ubuntu on ARM64 and provides the package repository used by this script: [Docker Engine on Ubuntu](https://docs.docker.com/engine/install/ubuntu/).
+
+If the VM already exists, SSH into it and run that script with `sudo` instead.
+
+### 3. Configure and start the app
+
+SSH to the VM as `ubuntu`, then run:
+
+```bash
+git clone https://github.com/joebin02/urlShortener.git
+cd urlShortener
+cp .env.oracle.example .env
+nano .env
+```
+
+Replace `REPLACE_WITH_PUBLIC_IP` in `APP_BASE_URL` with the VM's public IPv4 address. Set `SHORTLY_DB_PASSWORD` to a long random value. Then start the stack:
+
+```bash
+sudo docker compose up -d --build
+sudo docker compose ps
+```
+
+Open `http://YOUR_PUBLIC_IP` in a browser. The generated short links will use that public IP and route through Nginx. The app uses HTTP for an IP-only demo; use a domain and configure HTTPS before treating it as a public service. Keep the VM and all resources within the Always Free limits, and monitor Oracle Cloud billing and usage.
+
+### Update the demo
+
+After a change is pushed to GitHub, SSH into the VM and run:
+
+```bash
+./deploy/oracle-cloud/deploy.sh
+```
+
+### Stop or remove the demo
+
+Stop containers while keeping the data volume:
+
+```bash
+sudo docker compose down
+```
+
+To delete the app's database volume as well:
+
+```bash
+sudo docker compose down -v
+```
+
+Stopping containers does not stop or delete the Oracle VM. Stop or terminate the VM in the Oracle Console when you no longer want it running; check Oracle's current billing rules for storage and any other attached resources.
