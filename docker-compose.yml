@@ -1,0 +1,40 @@
+services:
+  frontend:
+    build: ./frontend
+    ports: ["4200:80"]
+    depends_on: [api]
+  api:
+    build: .
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/shortly
+      SPRING_DATASOURCE_USERNAME: shortly
+      SPRING_DATASOURCE_PASSWORD: shortly
+      SPRING_DATA_REDIS_HOST: redis
+      APP_BASE_URL: http://localhost:8080
+    ports: ["8080:8080"]
+    depends_on:
+      postgres: { condition: service_healthy }
+      redis: { condition: service_healthy }
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: shortly
+      POSTGRES_USER: shortly
+      POSTGRES_PASSWORD: shortly
+    ports: ["5432:5432"]
+    volumes: [postgres_data:/var/lib/postgresql/data]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U shortly -d shortly"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+  redis:
+    image: redis:7-alpine
+    ports: ["6379:6379"]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+volumes:
+  postgres_data:
